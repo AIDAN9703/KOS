@@ -1,0 +1,422 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User-related Models
+model Users {
+  id                 Int             @id @default(autoincrement())
+  email              String?         @unique @db.VarChar(320)
+  password           String?         @db.VarChar(255)
+  phoneNumber        String          @unique @db.VarChar(20)
+  role               UserRole        @default(USER)
+  isPhoneVerified    Boolean?        @default(false)
+  isEmailVerified    Boolean?        @default(false)
+  isProfileComplete  Boolean?        @default(false)
+  status             UserStatus      @default(ACTIVE)
+  dateOfBirth        DateTime?       @db.Timestamptz(6)
+  address            String?         @db.VarChar(255)
+  profileImage       String?         @db.VarChar(255)
+  preferences        Json?           @default("{}") @db.Json
+  bio                String?         @db.Text
+  emergencyContact   Json?           @default("{}") @db.Json
+  stripeCustomerId   String?         @unique @db.VarChar(255)
+  verifiedId         Boolean?        @default(false)
+  idDocuments        String[]        @default([]) @db.VarChar(255)
+  boatingLicense     String?         @db.VarChar(255)
+  licenseExpiry      DateTime?       @db.Timestamptz(6)
+  createdAt          DateTime        @db.Timestamptz(6)
+  updatedAt          DateTime        @db.Timestamptz(6)
+  boats              Boats[]
+  bookings           Bookings[]
+  reviews            Reviews[]       @relation("ReviewAuthor")
+  notifications      Notifications[]
+  firstName          String?         @db.VarChar(255)
+  lastName           String?         @db.VarChar(255)
+  languagePreference String?         @db.VarChar(50)
+  timezone           String?         @db.VarChar(50)
+  socialLinks        Json?           @default("{}")
+  verificationStatus Json?           @default("{}")
+  paymentMethods     Json?           @default("[]")
+  favoriteBoats      Json?           @default("[]")
+  searchHistory      Json?           @default("[]")
+  membershipTier     MembershipTier  @default(GOLD)
+  loyaltyPoints      Int             @default(0)
+  referralCode       String?         @unique
+  referredBy         Int? // Reference to referring user
+  lastLoginAt        DateTime?
+  deviceTokens       String[]        @default([]) // For push notifications
+
+  @@index([role, status])
+  @@index([phoneNumber, status])
+  @@index([stripeCustomerId])
+  @@index([referredBy])
+}
+
+model VerificationCodes {
+  id          String               @id @db.Uuid
+  phoneNumber String               @db.VarChar(255)
+  code        String               @db.VarChar(255)
+  type        VerificationCodeType
+  used        Boolean?             @default(false)
+  expiresAt   DateTime             @db.Timestamptz(6)
+  createdAt   DateTime             @db.Timestamptz(6)
+  updatedAt   DateTime             @db.Timestamptz(6)
+
+  @@index([phoneNumber, type, used, expiresAt], map: "verification_codes_phone_number_type_used_expires_at")
+}
+
+// Boat-related Models
+model Boats {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @db.VarChar(255)
+  description        String
+  type               String              @db.VarChar(255)
+  make               String              @db.VarChar(255)
+  model              String              @db.VarChar(255)
+  year               Int                 @db.SmallInt
+  sleeps             Int?                @db.SmallInt
+  staterooms         Int?                @db.SmallInt
+  bathrooms          Int?                @db.SmallInt
+  beds               Int?                @db.SmallInt
+  engineCount        Int?                @db.SmallInt
+  enginePower        String?             @db.VarChar(255)
+  fuelType           FuelType?
+  cruisingSpeed      Int?                @db.SmallInt
+  maxSpeed           Int?                @db.SmallInt
+  beam               String?             @db.VarChar(255)
+  draft              String?             @db.VarChar(255)
+  lastServiced       DateTime?           @db.Timestamptz(6)
+  amenities          String[]            @default([]) @db.VarChar(255)
+  documents          Json?               @default("{}")
+  specifications     Json?               @default("{}")
+  rules              String[]            @default([]) @db.VarChar(255)
+  cancellationPolicy CancellationPolicy? @default(MODERATE)
+  securityDeposit    Decimal?            @db.Decimal(10, 2)
+  insuranceStatus    InsuranceStatus?    @default(PENDING)
+  videoTour          String?             @db.VarChar(255)
+  virtualTour        String?             @db.VarChar(255)
+  length             String              @db.VarChar(255)
+  capacity           Int                 @db.SmallInt
+  location           String              @db.VarChar(255)
+  images             String[]            @default(dbgenerated("(ARRAY[]::character varying[])::character varying(255)[]")) @db.VarChar(255)
+  status             BoatStatus?         @default(ACTIVE)
+  ownerId            Int
+  createdAt          DateTime            @db.Timestamptz(6)
+  updatedAt          DateTime            @db.Timestamptz(6)
+  boatPrices         BoatPrices[]
+  user               Users               @relation(fields: [ownerId], references: [id], onDelete: NoAction)
+  bookings           Bookings[]
+  maintenances       Maintenances[]
+  reviews            Reviews[]
+  averageRating      Decimal?            @db.Decimal(3, 2)
+  totalBookings      Int                 @default(0)
+  coordinates        Json?
+  availability       Json?               @default("{}")
+  minimumNotice      Int                 @default(24)
+  maximumDuration    Int?
+  minimumDuration    Int?
+  seasonalRates      Json?               @default("{}")
+  allowedActivities  String[]            @default([])
+  features           BoatFeature[]       @relation("BoatFeatures")
+
+  @@index([status, location])
+  @@index([ownerId, status])
+  @@index([make, model, year])
+  @@index([type, capacity])
+  @@index([averageRating])
+  @@index([coordinates])
+  @@index([totalBookings])
+}
+
+model BoatPrices {
+  id            Int        @id @default(autoincrement())
+  boatId        Int
+  hours         Int        @db.SmallInt
+  price         Decimal    @db.Decimal(10, 2)
+  effectiveDate DateTime   @db.Timestamptz(6)
+  expiryDate    DateTime?  @db.Timestamptz(6)
+  description   String?    @db.VarChar(255)
+  isActive      Boolean?   @default(true)
+  createdAt     DateTime   @db.Timestamptz(6)
+  updatedAt     DateTime   @db.Timestamptz(6)
+  Boats         Boats      @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  Bookings      Bookings[]
+
+  @@index([boatId, isActive, effectiveDate, expiryDate])
+  @@index([effectiveDate, expiryDate])
+}
+
+// Booking-related Models
+model Bookings {
+  id                  Int           @id @default(autoincrement())
+  userId              Int
+  boatId              Int
+  boatPriceId         Int
+  startDate           DateTime      @db.Timestamptz(6)
+  endDate             DateTime      @db.Timestamptz(6)
+  duration            Int
+  totalPrice          Decimal       @db.Decimal(10, 2)
+  status              BookingStatus @default(PENDING)
+  paymentStatus       PaymentStatus @default(PENDING)
+  specialRequests     String?
+  createdAt           DateTime      @db.Timestamptz(6)
+  updatedAt           DateTime      @db.Timestamptz(6)
+  paymentIntentId     String?       @db.VarChar(255)
+  stripeSessionId     String?       @db.VarChar(255)
+  addOns              Json?         @default("{}")
+  boat                Boats         @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  boatPrice           BoatPrices    @relation(fields: [boatPriceId], references: [id], onDelete: NoAction)
+  user                Users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment             Payments?
+  review              Reviews?
+  guestCount          Int?          @db.SmallInt
+  checkinTime         DateTime?     @db.Timestamptz(6)
+  checkoutTime        DateTime?     @db.Timestamptz(6)
+  cancellationReason  String?       @db.Text
+  refundAmount        Decimal?      @db.Decimal(10, 2)
+  weatherConditions   Json?         @default("{}")
+  crewMembers         Json?         @default("[]")
+  itinerary           Json?         @default("{}")
+  insuranceDetails    Json?         @default("{}")
+  checklistCompleted  Boolean       @default(false)
+  weatherAlert        Boolean?      @default(false)
+  contractSigned      Boolean       @default(false)
+  securityDepositPaid Boolean       @default(false)
+  insuranceVerified   Boolean       @default(false)
+
+  @@index([userId, status])
+  @@index([boatId, startDate])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([startDate, endDate])
+}
+
+model Payments {
+  id                    Int           @id @default(autoincrement())
+  bookingId             Int           @unique
+  stripePaymentIntentId String?       @unique @db.VarChar(255)
+  stripeCustomerId      String?       @db.VarChar(255)
+  amount                Decimal       @db.Decimal(10, 2)
+  currency              String?       @default("usd") @db.VarChar(255)
+  status                PaymentStatus @default(PENDING)
+  paymentMethod         String?       @db.VarChar(255)
+  refundAmount          Decimal?      @default(0) @db.Decimal(10, 2)
+  refundReason          String?       @db.VarChar(255)
+  stripeRefundId        String?       @db.VarChar(255)
+  metadata              Json?         @default("{}")
+  receiptUrl            String?       @db.VarChar(255)
+  paymentDate           DateTime?     @db.Timestamptz(6)
+  createdAt             DateTime      @db.Timestamptz(6)
+  updatedAt             DateTime      @db.Timestamptz(6)
+  booking               Bookings      @relation(fields: [bookingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([bookingId], map: "payments_booking_id")
+  @@index([stripePaymentIntentId], map: "payments_stripe_payment_intent_id")
+}
+
+// Review & Feedback Models
+model Reviews {
+  id              Int          @id @default(autoincrement())
+  bookingId       Int          @unique
+  reviewer        Users        @relation("ReviewAuthor", fields: [reviewerId], references: [id])
+  reviewerId      Int
+  boat            Boats        @relation(fields: [targetId], references: [id])
+  targetId        Int
+  rating          Int          @db.SmallInt
+  comment         String?
+  response        String?
+  responseDate    DateTime?    @db.Timestamptz(6)
+  status          ReviewStatus @default(PENDING)
+  helpful         Int?         @default(0)
+  photos          String[]     @default([]) @db.VarChar(255)
+  verified        Boolean?     @default(true)
+  createdAt       DateTime     @db.Timestamptz(6)
+  updatedAt       DateTime     @db.Timestamptz(6)
+  booking         Bookings     @relation(fields: [bookingId], references: [id], onDelete: NoAction)
+  cleanliness     Int?         @db.SmallInt
+  communication   Int?         @db.SmallInt
+  accuracy        Int?         @db.SmallInt
+  value           Int?         @db.SmallInt
+  location        Int?         @db.SmallInt
+  experience      Int?         @db.SmallInt
+  recommended     Boolean      @default(true)
+  tripDetails     Json?        @default("{}")
+  moderationNotes String?      @db.Text
+
+  @@index([reviewerId])
+  @@index([targetId])
+  @@index([bookingId])
+}
+
+// Maintenance & Operations Models
+model Maintenances {
+  id                  Int                  @id @default(autoincrement())
+  boatId              Int
+  type                MaintenanceType
+  description         String
+  cost                Decimal?             @db.Decimal(10, 2)
+  scheduledDate       DateTime             @db.Timestamptz(6)
+  completedDate       DateTime?            @db.Timestamptz(6)
+  status              MaintenanceStatus    @default(SCHEDULED)
+  serviceProvider     String?              @db.VarChar(255)
+  documents           String[]             @default(dbgenerated("(ARRAY[]::character varying[])::character varying(255)[]")) @db.VarChar(255)
+  notes               String?
+  nextMaintenanceDate DateTime?            @db.Timestamptz(6)
+  createdAt           DateTime             @db.Timestamptz(6)
+  updatedAt           DateTime             @db.Timestamptz(6)
+  boat                Boats                @relation(fields: [boatId], references: [id])
+  partsCost           Decimal?             @db.Decimal(10, 2)
+  laborCost           Decimal?             @db.Decimal(10, 2)
+  warranty            Json?                @default("{}")
+  technician          String?              @db.VarChar(255)
+  diagnosis           String?              @db.Text
+  resolution          String?              @db.Text
+  partsReplaced       Json?                @default("[]")
+  engineHours         Int?                 @db.Integer
+  priority            MaintenancePriority? @default(NORMAL)
+}
+
+model Notifications {
+  id        Int                   @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String                @db.VarChar(255)
+  message   String
+  priority  NotificationPriority? @default(LOW)
+  isRead    Boolean?              @default(false)
+  createdAt DateTime              @db.Timestamptz(6)
+  updatedAt DateTime              @db.Timestamptz(6)
+  user      Users                 @relation(fields: [userId], references: [id])
+}
+
+// Enums - User Related
+enum UserRole {
+  USER
+  ADMIN
+  OWNER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum MembershipTier {
+  GOLD
+  PLATINUM
+  DIAMOND
+  ELITE
+  VIP
+}
+
+// Enums - Boat Related
+enum BoatStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum FuelType {
+  DIESEL
+  GASOLINE
+  ELECTRIC
+  HYBRID
+}
+
+enum CancellationPolicy {
+  FLEXIBLE
+  MODERATE
+  STRICT
+}
+
+enum InsuranceStatus {
+  PENDING
+  VALID
+  EXPIRED
+}
+
+// Enums - Booking Related
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+// Enums - Maintenance Related
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  ROUTINE
+  REPAIR
+  EMERGENCY
+  INSPECTION
+}
+
+enum MaintenancePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// Enums - Notification Related
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum NotificationType {
+  BOOKING_REQUEST
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  PAYMENT_RECEIVED
+  REVIEW_RECEIVED
+  MAINTENANCE_DUE
+  INSURANCE_EXPIRING
+  SYSTEM_NOTIFICATION
+}
+
+// Enums - Review Related
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  FLAGGED
+  REMOVED
+}
+
+enum VerificationCodeType {
+  REGISTRATION
+  LOGIN
+}
+
+model BoatFeature {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  category  String
+  icon      String?
+  boats     Boats[]  @relation("BoatFeatures")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
