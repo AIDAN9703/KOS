@@ -1,0 +1,105 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - name: "Warm up"
+      duration: 30
+      arrivalRate: 2
+    - name: "Ramp up load"
+      duration: 60
+      arrivalRate: 5
+      rampTo: 15
+    - name: "Sustained load"
+      duration: 120
+      arrivalRate: 15
+
+scenarios:
+  - name: "Boat browsing flow"
+    flow:
+      # Get all boats (paginated)
+      - get:
+          url: "/api/boats"
+          qs:
+            page: 1
+            limit: 10
+            status: "ACTIVE"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data.boats"
+            - hasProperty: "data.pagination"
+
+      # Get featured boats
+      - get:
+          url: "/api/boats/featured"
+          expect:
+            - statusCode: 200
+
+      # Search boats
+      - get:
+          url: "/api/boats/search"
+          qs:
+            location: "Miami"
+            capacity: 4
+            type: "YACHT"
+          expect:
+            - statusCode: 200
+
+      # Get boat details
+      - get:
+          url: "/api/boats/1"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data.boatPrices"
+            - hasProperty: "data.features"
+
+      # Get boat availability
+      - get:
+          url: "/api/boats/1/availability"
+          qs:
+            startDate: "{{ $formatDate($now, 'YYYY-MM-DD') }}"
+            endDate: "{{ $formatDate($nowPlusHours(24), 'YYYY-MM-DD') }}"
+          expect:
+            - statusCode: 200
+
+      # Get boat prices
+      - get:
+          url: "/api/boats/1/prices"
+          qs:
+            date: "{{ $formatDate($now, 'YYYY-MM-DD') }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data.prices"
+
+      # Get boat reviews
+      - get:
+          url: "/api/boats/1/reviews"
+          expect:
+            - statusCode: 200
+
+      # Get boat review stats
+      - get:
+          url: "/api/boats/1/review-stats"
+          expect:
+            - statusCode: 200
+
+      # Simulate user thinking time
+      - think: 2
+
+      # Get popular boats in location
+      - get:
+          url: "/api/boats/popular"
+          qs:
+            location: "Miami"
+            limit: 6
+          expect:
+            - statusCode: 200
+
+      # Get last-minute deals
+      - get:
+          url: "/api/boats/deals"
+          qs:
+            days: 7
+          expect:
+            - statusCode: 200
+
+      # Think time between requests
+      - think: 1
