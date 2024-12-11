@@ -2,6 +2,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator types {
+  provider = "prisma-client-js"
+  output = "../frontend/src/types/prisma"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -158,8 +163,10 @@ model Bookings {
   boatId              Int
   boatPriceId         Int
   startDate           DateTime      @db.Timestamptz(6)
-  endDate             DateTime      @db.Timestamptz(6)
-  duration            Int
+  endDate             DateTime?     @db.Timestamptz(6)
+  startTime           String?       @db.VarChar(5)
+  endTime             String?       @db.VarChar(5)
+  duration            Int?
   totalPrice          Decimal       @db.Decimal(10, 2)
   status              BookingStatus @default(PENDING)
   paymentStatus       PaymentStatus @default(PENDING)
