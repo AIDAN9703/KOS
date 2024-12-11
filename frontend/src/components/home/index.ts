@@ -1,0 +1,10 @@
+// Export all home components for easy importing
+export { default as HeroSection } from './HeroSection';
+export { default as FeaturesSection } from './FeaturesSection';
+export { default as BrandsCarousel } from './BrandsCarousel';
+export { default as FeaturedYachts } from './FeaturedYachts';
+export { default as ExperienceSection } from './ExperienceSection';
+export { default as TestimonialsSection } from './TestimonialsSection';
+export { default as DestinationsSection } from './DestinationsSection';
+export { default as DarkModeToggle } from './DarkModeToggle';
+export { default as BackToTop } from './BackToTop'; 

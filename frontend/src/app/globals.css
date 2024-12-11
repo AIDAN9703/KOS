@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+
+@font-face {
+  font-family: 'OpenSans';
+  src: url('/fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf') format('truetype-variations');
+  font-weight: 300 800;
+  font-stretch: 75% 100%;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'OpenSans';
+  src: url('/fonts/Open_Sans/OpenSans-Italic-VariableFont_wdth,wght.ttf') format('truetype-variations');
+  font-weight: 300 800;
+  font-stretch: 75% 100%;
+  font-style: italic;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #21336a;
+  --primary: #21336a;
+  --secondary: #c5b358;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'OpenSans', Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+.shadow-text {
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 30s linear infinite;
+  min-width: fit-content;
+}
